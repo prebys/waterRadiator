@@ -1,0 +1,7 @@
+# Macro file for example B1 test
+# beam defined in file
+
+/run/initialize
+
+/run/beamOn 1000
+
