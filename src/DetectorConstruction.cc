@@ -35,14 +35,21 @@
 #include "G4SystemOfUnits.hh"
 #include "G4TwoVector.hh"
 #include "G4ExtrudedSolid.hh"
+#include "G4SubtractionSolid.hh"
 #include "G4Polycone.hh"
+#include "G4Tubs.hh"
 #include "G4RotationMatrix.hh"
 #include "G4ios.hh"
+
+#include "G4OpticalSurface.hh"
+#include "G4LogicalSkinSurface.hh"
 
 // Stuff for the sensitive surface
 #include "G4SDManager.hh"
 #include "SurfaceSD.hh"
 #include "Radiator.hh"
+
+#include "CADMesh.hh"
 
 
 namespace B1
@@ -141,9 +148,9 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   //
   // World
   //
-  G4double world_sizeX = 400. * mm;
-  G4double world_sizeY = 400.* mm;
-  G4double world_sizeZ = 400. * mm;
+  G4double world_sizeX = 1000. * mm;
+  G4double world_sizeY = 1000.* mm;
+  G4double world_sizeZ = 2400. * mm;
 
 
   auto solidWorld =
@@ -182,7 +189,6 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       "TransportLV"
    );
    
-
 
   // Place them in the world (no rotation, centered at origin)
   new G4PVPlacement(
@@ -293,6 +299,71 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       0,                       // copy number
       true                     // check overlaps
     );
+ 
+ // Add a reflector
+  G4Material* stainlessSteel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
+
+ // Make it reflective
+ auto mirrorSurface = new G4OpticalSurface("MirrorSurface");
+
+ mirrorSurface->SetType(dielectric_metal);   // metal mirror
+ mirrorSurface->SetModel(unified);            // most flexible
+ mirrorSurface->SetFinish(polished);          // or ground
+ const G4int nEntries = 2;
+ G4double energy[nEntries] = {
+  1.0*eV, 5.0*eV
+ };
+
+ G4double reflectivity[nEntries] = {
+  0.95, 0.95
+ };
+
+ auto surfaceMPT = new G4MaterialPropertiesTable();
+ surfaceMPT->AddProperty("REFLECTIVITY", energy, reflectivity, nEntries);
+
+ mirrorSurface->SetMaterialPropertiesTable(surfaceMPT);
+ 
+  // Read in the stl file defining the reflector
+    // Import the .stl file
+  auto mesh = CADMesh::TessellatedMesh::FromSTL("Mirror.stl");
+  mesh->SetScale(1.0);  // mm
+
+   G4VSolid* reflectorSolid = mesh->GetSolid();
+
+    
+  auto reflectorLV = new G4LogicalVolume (
+    reflectorSolid,
+    stainlessSteel,
+    "ReflectorLV");
+    
+    // Add the reflective surface
+    
+   new G4LogicalSkinSurface(
+     "MirrorSkin",
+     reflectorLV,
+     mirrorSurface
+   );    
+   // Place four of these, rotating by 90 degrees each time
+     // rotate
+    const G4int NREF=4;    
+    
+    for(int i = 0; i<NREF; i++) {
+      auto refRot = new G4RotationMatrix();
+      
+      refRot->rotateZ(i*90.*degree);
+
+
+      new G4PVPlacement(
+        refRot,                 // rotate
+        G4ThreeVector(0,0,0),    // position
+        reflectorLV,           // logical volume
+        "Reflector1",          // name
+        logicWorld,              // mother volume
+        false,                   // no boolean operation
+        i,                       // copy number
+        false                     // check overlaps
+      );
+    }
  
  
  // Set Shape2 as scoring volume

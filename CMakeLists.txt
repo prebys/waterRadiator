@@ -34,7 +34,9 @@ set(PROJECT_SCRIPTS
   init_vis.mac
   vis.mac
   Analyze.C
-  Analyze.h)
+  Analyze.h
+  Mirror.stl
+  focus.txt)
 
 foreach(_script ${PROJECT_SCRIPTS})
   configure_file(
