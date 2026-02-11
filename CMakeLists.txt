@@ -35,6 +35,8 @@ set(PROJECT_SCRIPTS
   vis.mac
   Analyze.C
   Analyze.h
+  RMSStudy.C
+  RMSStudy.h
   Mirror.stl
   focus.txt)
 

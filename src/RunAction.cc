@@ -72,7 +72,7 @@ RunAction::RunAction()
   man->SetDefaultFileType("root");
   man->SetFileName("surface_hits");
 
-  man->CreateNtuple("hits", "Particles crossing surface");
+  man->CreateNtuple("windowhits", "Particles exiting window");
   man->CreateNtupleIColumn("eventID");   // <-- NEW
   man->CreateNtupleIColumn("pdg");
   man->CreateNtupleDColumn("x");
@@ -83,6 +83,19 @@ RunAction::RunAction()
   man->CreateNtupleDColumn("pz");
   man->CreateNtupleDColumn("ekin");
   man->FinishNtuple();
+  
+  man->CreateNtuple("hits", "Particles crossing virtual detector");
+  man->CreateNtupleIColumn("eventID");   // <-- NEW
+  man->CreateNtupleIColumn("pdg");
+  man->CreateNtupleDColumn("x");
+  man->CreateNtupleDColumn("y");
+  man->CreateNtupleDColumn("z");
+  man->CreateNtupleDColumn("px");
+  man->CreateNtupleDColumn("py");
+  man->CreateNtupleDColumn("pz");
+  man->CreateNtupleDColumn("ekin");
+  man->FinishNtuple();
+
 
 }
 

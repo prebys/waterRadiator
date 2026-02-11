@@ -49,6 +49,7 @@
 // Stuff for the sensitive surface
 #include "G4SDManager.hh"
 #include "SurfaceSD.hh"
+#include "VirtualSD.hh"
 #include "Radiator.hh"
 
 #include "CADMesh.hh"
@@ -429,6 +430,38 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       0,                       // copy number
       true                     // check overlaps
     );
+
+    // Now make some thin detectors
+     auto detectorLV = new G4LogicalVolume(
+      shieldTube,
+      air,
+      "DetectorLV"
+    );
+    
+  //Make it a sensitive detector
+  auto virtualSD = new VirtualSD("VirtualSD");
+  sdManager->AddNewDetector(virtualSD);
+
+  detectorLV->SetSensitiveDetector(virtualSD);
+
+    
+    const G4int NDET=12;
+    
+    G4double z0=0,deltaZ=.5*cm;
+    
+    for(int i=0;i<NDET;i++) {
+          new G4PVPlacement(
+          nullptr,                 // no rotation
+          G4ThreeVector(0,0,z0+i*deltaZ),    // position
+          detectorLV,           // logical volume
+          "Detector",          // name
+          logicWorld,              // mother volume
+          false,                   // no boolean operation
+          i,                       // copy number
+          true                     // check overlaps
+       );       
+    }
+
 
  // Set Shape2 as scoring volume
   //
