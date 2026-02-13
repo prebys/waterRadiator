@@ -40,6 +40,7 @@
 #include "G4Tubs.hh"
 #include "G4Sphere.hh"
 #include "G4IntersectionSolid.hh"
+#include "G4UnionSolid.hh"
 #include "G4RotationMatrix.hh"
 #include "G4ios.hh"
 
@@ -151,8 +152,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   //
   // World
   //
-  G4double world_sizeX = 1000. * mm;
-  G4double world_sizeY = 1000.* mm;
+  G4double world_sizeX = 2000. * mm;
+  G4double world_sizeY = 2000.* mm;
   G4double world_sizeZ = 2400. * mm;
 
 
@@ -174,9 +175,12 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                                      checkOverlaps);  // overlaps checking
 
    // Make the shapes for the radiator and transport sections
+   G4double ang=0.713532378;   // Cherenkov angle
+
    G4double beamRadius = 3.*cm;
    G4double lenRadiator = 10.*cm;
-   G4double lenTransport = 10.*cm;
+   G4double mirrorRadius = 50.*cm;
+   G4double mirrorThickness = 2.*mm;
    Radiator rad(beamRadius,lenRadiator);
    
    // Logical for radiator
@@ -320,9 +324,12 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
    G4VSolid* reflectorSolid = mesh->GetSolid();
   */
   
+  // Origin or the center of the photons that get through
+  G4double zOrigin = (lenRadiator-beamRadius/tan(ang))/2.;
+  zOrigin = 0;
+  
   // Construct a polycone that will be the envelope for  the mirror
-  G4double ang=0.713532378;   
-  G4double zEnv[2] = {lenRadiator,50*cm};
+  G4double zEnv[2] = {lenRadiator,zOrigin+mirrorRadius+mirrorThickness};
   G4double rEnvInner[2] = {beamRadius-1*cm,beamRadius-1.*cm+(zEnv[1]-zEnv[0])*tan(ang)};
   G4double rEnvOuter[2] = {beamRadius+1*cm+lenRadiator*tan(ang),beamRadius+1.*cm+
          zEnv[1]*tan(ang)};
@@ -336,17 +343,16 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
          
   // Now create the section of the spherical mirror
   
-  G4double yDetector = 350*mm;
+  G4double yDetector = 50*cm;
   
   auto sphere = new G4Sphere("Reflector",
-                           500*mm,
-                           502*mm,
-                           0.*deg, 360.*deg,
-                           0.*deg, 60.*deg);
+                           mirrorRadius,
+                           mirrorRadius+mirrorThickness,
+                           0.*deg, 360.*degree,
+                           0.*deg, 60.*degree);
                            
   // Now make the mirror from the union of the two.  Make the origine of the rays the 
   // middle of the part of the radiator that makes it out
-   G4double zOrigin = (lenRadiator-beamRadius/tan(ang))/2.;
    auto reflectorSolid = new G4IntersectionSolid(
     "Mirror",
     envelope,
@@ -374,7 +380,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4double xoffs[NREF] = {0.,yDetector/2.,0.,-yDetector/2.};
     G4double yoffs[NREF] = {yDetector/2.,0.,-yDetector/2.,0.};
         
-    for(int i = 1; i<NREF; i+=2) {
+    for(int i = 0; i<NREF; i+=2) {
       auto refRot = new G4RotationMatrix();
       
       refRot->rotateZ(i*90.*degree);
@@ -384,7 +390,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         refRot,                 // rotate
         G4ThreeVector(0.,0.,0.),    // position
         reflectorLV,           // logical volume
-        "Reflector1",          // name
+        "Reflector",          // name
         logicWorld,              // mother volume
         false,                   // no boolean operation
         i,                       // copy number
@@ -395,8 +401,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
  // kill particles that get to a certain point
   auto shieldTube = new G4Tubs(
     "Shield",
-    yDetector-10.*cm,
-    yDetector+10.*cm,
+    yDetector-20.*cm,
+    yDetector+20.*cm,
     1*mm,
     0*degree,
     360*degree
@@ -407,7 +413,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       "ShieldLV"
     );
   // Place it in the world (no rotation, centered at origin)
-  
+  /*
     new G4PVPlacement(
       nullptr,                 // no rotation
       G4ThreeVector(0,0,-10.*cm),    // position
@@ -418,7 +424,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       0,                       // copy number
       true                     // check overlaps
     );
-
+    */
     // Now make some thin detectors
      auto detectorLV = new G4LogicalVolume(
       shieldTube,
@@ -435,7 +441,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     
     const G4int NDET=20;
     
-    G4double z0=-5*cm,deltaZ=1.*cm;
+    G4double z0=-5*cm,deltaZ=2.*cm;
     
     for(int i=0;i<NDET;i++) {
           new G4PVPlacement(

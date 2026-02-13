@@ -110,7 +110,9 @@
 /vis/geometry/set/colour RadiatorLV 0 0 0 1 .6
 /vis/geometry/set/colour TransportLV 0 0 0 1 .6
 /vis/geometry/set/colour WindowLV 0 0 1 0 .8
+# Turn off detector visibility
 /vis/geometry/set/colour DetectorLV 0 1 1 0 .3
+/vis/geometry/set/colour DetectorLV 0 1 1 0 0
 
 /vis/viewer/set/style surface
 /vis/viewer/set/hiddenMarker true

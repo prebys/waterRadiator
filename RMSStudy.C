@@ -38,14 +38,14 @@ void RMSStudy::Loop()
    // Get the Z slices
    const int NSLICE=20;
    double z0=-55.;
-   double deltaZ=10.;
+   double deltaZ=20.;
    double z1=z0+(NSLICE)*deltaZ;
    
    TH2F *nphotons = new TH2F("nphotons","Number of Photons in Cuts vs. Z",
      NSLICE,z0,z1,400,0.,4000.);
    TH2F *xrms = new TH2F("xrms","X RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
    TH2F *yrms = new TH2F("yrms","Y RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
-   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",NSLICE,z0,z1,100,0.,100.);
+   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",NSLICE,z0,z1,100,0.,200.);
    
    
  
@@ -73,16 +73,16 @@ void RMSStudy::Loop()
       // Calculate the index
       int iz = int((z-z0)/deltaZ);
       if((iz<0)||(iz>19)) {
-        printf("iz = %d",iz);
+        printf("iz = %d\n",iz);
       }
-      // Count both sides
-      double absx = abs(x);
+      // Count top and bottom
+      double absy = abs(y);
        
       nphot[iz]+=1;
-      xmean[iz]+=absx;
-      x2mean[iz]+=absx*absx;
-      ymean[iz]+=y;
-      y2mean[iz]+=y*y;
+      xmean[iz]+=x;
+      x2mean[iz]+=x*x;
+      ymean[iz]+=absy;
+      y2mean[iz]+=absy*absy;
       incEvent = eventID;   // Last event to increment counts
 
       // Add everything up whenever the event changes or on the 
