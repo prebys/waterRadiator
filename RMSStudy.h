@@ -148,6 +148,8 @@ Int_t RMSStudy::Cut(Long64_t entry)
 // This function may be called from Loop.
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
-   return 1;
+// Doing this meaningless test prevents an annoying unused variable warning
+   if(entry>=0) return 1; 
+   else return 1;
 }
 #endif // #ifdef RMSStudy_cxx

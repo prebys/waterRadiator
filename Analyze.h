@@ -66,7 +66,7 @@ Analyze::Analyze(TTree *tree) : fChain(0)
       if (!f || !f->IsOpen()) {
          f = new TFile("output.root");
       }
-      f->GetObject("hits",tree);
+      f->GetObject("windowhits",tree);
 
    }
    Init(tree);
@@ -148,6 +148,8 @@ Int_t Analyze::Cut(Long64_t entry)
 // This function may be called from Loop.
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
-   return 1;
+// Doing this meaningless test prevents an annoying unused variable warning
+   if(entry>=0) return 1; 
+   else return 1;
 }
 #endif // #ifdef Analyze_cxx

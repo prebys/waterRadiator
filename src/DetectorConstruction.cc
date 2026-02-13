@@ -50,10 +50,11 @@
 // Stuff for the sensitive surface
 #include "G4SDManager.hh"
 #include "SurfaceSD.hh"
-#include "VirtualSD.hh"
 #include "Radiator.hh"
 
 #include "CADMesh.hh"
+
+#include "MyMaterials.hh"  // This is where the materials are built
 
 
 namespace B1
@@ -63,98 +64,37 @@ namespace B1
 
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
-  // Get nist material manager
-  // Create a bunch of materials, including optical properties.
-  G4NistManager* nist = G4NistManager::Instance();
+   // Set up some basic parameters
+   // World
+   //
+   G4double world_sizeX = 2000. * mm;
+   G4double world_sizeY = 2000.* mm;
+   G4double world_sizeZ = 2400. * mm;
   
-  // Create fused Silica (straight from ChatGPT)
-  // Elements
-  auto* elSi = new G4Element("Silicon",  "Si", 14., 28.0855*g/mole);
-  auto* elO  = new G4Element("Oxygen",   "O",  8., 15.999*g/mole);
+    // Make the shapes for the radiator and transport sections
+   G4double ang=0.713532378;   // Cherenkov angle
 
-  G4Material* quartz = new G4Material("Quartz", 2.200*g/cm3, 2);
-  quartz->AddElement(elSi, 1);
-  quartz->AddElement(elO, 2);
-
-  const G4int NUM = 10;
-	
-  G4double photonEnergy[NUM] = {
-		1.77*eV, 2.00*eV, 2.25*eV, 2.50*eV, 2.75*eV,
-		3.00*eV, 3.25*eV, 3.50*eV, 3.75*eV, 4.13*eV
-  };
-	
-	// Refractive index of fused silica (approximate)
-  G4double refractiveIndex[NUM] = {
-		1.455, 1.456, 1.457, 1.458, 1.459,
-		1.460, 1.461, 1.462, 1.463, 1.465
-  };
-	
-	// Absorption length (very long in visible; drops in UV)
-	G4double absorptionLength[NUM] = {
-		100*m, 100*m, 100*m, 100*m, 100*m,
-		100*m,  50*m,  20*m,  10*m,   1*m
-	};
-	
-	auto* mptQuartz = new G4MaterialPropertiesTable();
-	mptQuartz->AddProperty("RINDEX",    photonEnergy, refractiveIndex,  NUM);
-	mptQuartz->AddProperty("ABSLENGTH", photonEnergy, absorptionLength, NUM);
-	
-	// Optional: Rayleigh scattering (rough order-of-magnitude)
-	G4double rayleighLength[NUM] = {
-		40*m, 40*m, 35*m, 30*m, 25*m,
-		20*m, 15*m, 10*m,  7*m,  5*m
-	};
-	mptQuartz->AddProperty("RAYLEIGH", photonEnergy, rayleighLength, NUM);
-
-	quartz->SetMaterialPropertiesTable(mptQuartz);
-	
-	// Add the index of refraction for air
-  
-    G4Material* air = nist->FindOrBuildMaterial("G4_AIR");
-  
-    G4double airRindex[NUM] = { 1.0003, 1.0003,1.0003, 1.0003,1.0003, 1.0003,1.0003, 1.0003,
-     1.0003, 1.0003  };
-
-    auto mptAir = new G4MaterialPropertiesTable();
-    mptAir->AddProperty("RINDEX", photonEnergy, airRindex, NUM);
-    
-    // Uncomment this line to add optical properties.  Comment out if you don't want
-    // internal reflection
-  
-    air->SetMaterialPropertiesTable(mptAir);
-
-    // Water
-  G4Material* water = nist->FindOrBuildMaterial("G4_WATER");
-    
-  G4double H2OrefractiveIndex[NUM] = {
-		1.33, 1.33, 1.33, 1.33, 1.33,
-		1.33, 1.33, 1.33, 1.33, 1.33
-  };
-	
-	// Absorption length (very long in visible; drops in UV)
-	G4double H2OabsorptionLength[NUM] = {
-		70*m, 60*m, 55*m, 45*m, 35*m,
-		20*m,  15*m,  10*m,  8*m,   4*m
-	};
-	
-	auto* mptH2O= new G4MaterialPropertiesTable();
-	mptH2O->AddProperty("RINDEX",    photonEnergy, H2OrefractiveIndex,  NUM);
-	mptH2O->AddProperty("ABSLENGTH", photonEnergy, H2OabsorptionLength, NUM);
-	
-	// Add the index of refraction and absorber length to the material
-	water->SetMaterialPropertiesTable(mptH2O);
+   G4double beamRadius = 3.*cm;
+   G4double lenRadiator = 10.*cm;
+   G4double beamWindowThickness = .1*mm;
+   G4int  nMirrors = 2;   // Number of mirrors (can only be 2 or 4)
+   G4double mirrorRadius = 50.*cm;
+   G4double mirrorThickness = 2.*mm;
+   G4double yDetector = 50*cm; // Offset to detector.  It will rotate for each mirror
+   // This builds the radiator Solid
+   Radiator rad(beamRadius,lenRadiator);
+   static MyMaterials mat;
 
 
-  // Option to switch on/off checking of volumes overlaps
-  //
-  G4bool checkOverlaps = true;
+   G4cout << "About to create materials" << G4endl;
+   G4cout << "Created materials" << G4endl;
 
-  //
-  // World
-  //
-  G4double world_sizeX = 2000. * mm;
-  G4double world_sizeY = 2000.* mm;
-  G4double world_sizeZ = 2400. * mm;
+
+   // Option to switch on/off checking of volumes overlaps
+   //
+   G4bool checkOverlaps = true;
+
+
 
 
   auto solidWorld =
@@ -162,7 +102,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
               0.5 * world_sizeX, 0.5 * world_sizeY, 0.5 * world_sizeZ);  // its size
 
   auto logicWorld = new G4LogicalVolume(solidWorld,  // its solid
-                                        air,  // its material
+                                        mat.air,  // its material
                                         "World");  // its name
 
   auto physWorld = new G4PVPlacement(nullptr,  // no rotation
@@ -174,25 +114,17 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                                      0,  // copy number
                                      checkOverlaps);  // overlaps checking
 
-   // Make the shapes for the radiator and transport sections
-   G4double ang=0.713532378;   // Cherenkov angle
-
-   G4double beamRadius = 3.*cm;
-   G4double lenRadiator = 10.*cm;
-   G4double mirrorRadius = 50.*cm;
-   G4double mirrorThickness = 2.*mm;
-   Radiator rad(beamRadius,lenRadiator);
-   
+    
    // Logical for radiator
    auto radiatorLV = new G4LogicalVolume(
       rad.radiatorSolid,
-      water,
+      mat.water,
       "RadiatorLV"
     );
     
 
-  // Place them in the world (no rotation, centered at origin)
-  new G4PVPlacement(
+   // Place them in the world (no rotation, centered at origin)
+   new G4PVPlacement(
      nullptr,                 // no rotation
      G4ThreeVector(0,0,0),    // position
      radiatorLV,           // logical volume
@@ -201,89 +133,84 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
      false,                   // no boolean operation
      0,                       // copy number
      true                     // check overlaps
-  );
-  
-     // Full 360-degree polycone
+   );
+   // Full 360-degree polycone
    G4double startPhi = 0.0*deg;
    G4double deltaPhi = 360.0*deg;
 
-  //Make a detector to detect particle leaving the volume
-  //This isn't quite correct, but I'll fix it later.
-  
+   //Make a quartz window, which will also detect particles leaving the radiator,
+   //based on the dimensions of the radiator
+   //This isn't quite correct, but I'll fix it later.
+   G4double zWindow[2] = {rad.z[1],rad.z[2]};
+   G4double rInnerWindow[2] = {rad.rOuter[1],rad.rOuter[2]};
+   G4double rOuterWindow[2] = {rad.rOuter[1]+1*mm,rad.rOuter[2]+1*mm};
 
-  G4double zWindow[2] = {rad.z[1],rad.z[2]};
-  G4double rInnerWindow[2] = {rad.rOuter[1],rad.rOuter[2]};
-  G4double rOuterWindow[2] = {rad.rOuter[1]+1*mm,rad.rOuter[2]+1*mm};
 
-
-  auto windowSolid = new G4Polycone(
-    "Window",     // name
-    startPhi,         // start angle
-    deltaPhi,         // opening angle
-    2,       // number of z planes
-    zWindow,          // z coordinates
-    rInnerWindow,           // inner radii
-    rOuterWindow            // outer radii
-  );
+   auto windowSolid = new G4Polycone(
+     "Window",     // name
+     startPhi,         // start angle
+     deltaPhi,         // opening angle
+     2,       // number of z planes
+     zWindow,          // z coordinates
+     rInnerWindow,           // inner radii
+     rOuterWindow            // outer radii
+   );
 
    // Logical volume, made of quartz
    auto windowLV = new G4LogicalVolume(
       windowSolid,
-      quartz,
+      mat.quartz,
       "WindowLV"
     );
 
    //Make it a sensitive detector
-  auto sdManager = G4SDManager::GetSDMpointer();
-  auto surfaceSD = new SurfaceSD("Window");
-  sdManager->AddNewDetector(surfaceSD);
+   auto sdManager = G4SDManager::GetSDMpointer();
+   auto surfaceSD = new SurfaceSD("Window");
+   sdManager->AddNewDetector(surfaceSD);
 
-  windowLV->SetSensitiveDetector(surfaceSD);
+   windowLV->SetSensitiveDetector(surfaceSD);
 
-  // Place it in the world (no rotation, centered at origin)
+   // Place it in the world (no rotation, centered at origin)
   
-  new G4PVPlacement(
+   new G4PVPlacement(
      nullptr,                 // no rotation
      G4ThreeVector(0,0,0),    // position
      windowLV,           // logical volume
-    "Window",          // name
-    logicWorld,              // mother volume
-    false,                   // no boolean operation
-    0,                       // copy number
-    true                     // check overlaps
-  );
+     "Window",          // name
+     logicWorld,              // mother volume
+     false,                   // no boolean operation
+     0,                       // copy number
+     true                     // check overlaps
+   );
+   
+
   
   
- // Add a beryllium window at the end to block photons from getting back into 
- // transport
+   // Add a titanium window at the end to block photons from getting back into 
+   // transport
  
-  G4Material* beryllium = nist->FindOrBuildMaterial("G4_Ti");
-    // Use a polycone because I'm lazy
-  G4double zBeamWindow[2]={rad.z[2],rad.z[2]+.1*mm};
-  G4double rInnerBeamWindow[2]={0.,0.};
-  G4double rOuterBeamWindow[2]={beamRadius,beamRadius};
+   
+   auto beamWindowSolid = new G4Tubs(
+      "BeamWindow",
+      0.,
+      beamRadius,
+      beamWindowThickness,
+      0*degree,
+      360*degree);
 
-  auto beamWindowSolid = new G4Polycone(
-    "BeamWindow",     // name
-    startPhi,         // start angle
-    deltaPhi,         // opening angle
-    2,       // number of z planes
-    zBeamWindow,          // z coordinates
-    rInnerBeamWindow,           // inner radii
-    rOuterBeamWindow            // outer radii
-  );
 
-   // Logical volume, made of quartz
+
+   // Logical volume
    auto beamWindowLV = new G4LogicalVolume(
       beamWindowSolid,
-      beryllium,
+      mat.titanium,
       "BeamWindowLV"
     );
-  // Place it in the world (no rotation, centered at origin)
-  
+    // place 1 at each end of the radiator volume
+    // Beginning
     new G4PVPlacement(
       nullptr,                 // no rotation
-      G4ThreeVector(0,0,0),    // position
+      G4ThreeVector(0,0,-beamWindowThickness/2.),    // position
       beamWindowLV,           // logical volume
       "BeamWindow",          // name
       logicWorld,              // mother volume
@@ -291,102 +218,99 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       0,                       // copy number
       true                     // check overlaps
     );
- 
- // Add a reflector
-  G4Material* stainlessSteel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
+    // End
+    new G4PVPlacement(
+      nullptr,                 // no rotation
+      G4ThreeVector(0,0,lenRadiator+beamWindowThickness/2.),    // position
+      beamWindowLV,           // logical volume
+      "BeamWindow",          // name
+      logicWorld,              // mother volume
+      false,                   // no boolean operation
+      1,                       // copy number
+      true                     // check overlaps
+    );
 
- // Make it reflective
- auto mirrorSurface = new G4OpticalSurface("MirrorSurface");
-
- mirrorSurface->SetType(dielectric_metal);   // metal mirror
- mirrorSurface->SetModel(unified);            // most flexible
- mirrorSurface->SetFinish(polished);          // or ground
- const G4int nEntries = 2;
- G4double energy[nEntries] = {
-  1.0*eV, 5.0*eV
- };
-
- G4double reflectivity[nEntries] = {
-  0.95, 0.95
- };
-
- auto surfaceMPT = new G4MaterialPropertiesTable();
- surfaceMPT->AddProperty("REFLECTIVITY", energy, reflectivity, nEntries);
-
- mirrorSurface->SetMaterialPropertiesTable(surfaceMPT);
- 
-  // Read in the stl file defining the reflector
-  // Import the .stl file
-  /*
-  auto mesh = CADMesh::TessellatedMesh::FromSTL("Mirror.stl");
-  mesh->SetScale(1.0);  // mm
-
-   G4VSolid* reflectorSolid = mesh->GetSolid();
-  */
   
-  // Origin or the center of the photons that get through
-  G4double zOrigin = (lenRadiator-beamRadius/tan(ang))/2.;
-  zOrigin = 0;
+    // Uncomment the code below to read in the mirror from an STL file
+    // Import the .stl file
+    /*
+    auto mesh = CADMesh::TessellatedMesh::FromSTL("Mirror.stl");
+    mesh->SetScale(1.0);  // mm
+
+     G4VSolid* reflectorSolid = mesh->GetSolid();
+    */
+    // Otherwise, build the mirror by intersecting a partial sphere with a polycone
+    // Origin or the center of the photons that get through
+    //  Playing with different values
+    G4double zOrigin = (lenRadiator-beamRadius/tan(ang))/2.;
+    zOrigin = 0;
   
-  // Construct a polycone that will be the envelope for  the mirror
-  G4double zEnv[2] = {lenRadiator,zOrigin+mirrorRadius+mirrorThickness};
-  G4double rEnvInner[2] = {beamRadius-1*cm,beamRadius-1.*cm+(zEnv[1]-zEnv[0])*tan(ang)};
-  G4double rEnvOuter[2] = {beamRadius+1*cm+lenRadiator*tan(ang),beamRadius+1.*cm+
+    // Construct a polycone that will be the envelope for  the mirror by projecting
+    // the exit window
+    G4double zEnv[2] = {lenRadiator,zOrigin+mirrorRadius+mirrorThickness};
+    G4double rEnvInner[2] = {beamRadius-1*cm,beamRadius-1.*cm+(zEnv[1]-zEnv[0])*tan(ang)};
+    G4double rEnvOuter[2] = {beamRadius+1*cm+lenRadiator*tan(ang),beamRadius+1.*cm+
          zEnv[1]*tan(ang)};
+         
+    // Determine the extent of the envelope based on the number of mirrors
+    G4double envPhi0=1.*deg;
+    G4double envDeltaPhi=178*deg;
+    if(nMirrors==4) {
+      envPhi0=46.*deg;
+      envDeltaPhi=88.*deg;
+    }
   
-  auto envelope = new G4Polycone("Envelope",1.*deg,
-         178.*deg,
+    auto envelope = new G4Polycone("Envelope",
+         envPhi0,
+         envDeltaPhi,
          2,
          zEnv,
          rEnvInner,
          rEnvOuter);
          
-  // Now create the section of the spherical mirror
+    // Now create the section of the spherical mirror
   
-  G4double yDetector = 50*cm;
   
-  auto sphere = new G4Sphere("Reflector",
+    auto sphere = new G4Sphere("Reflector",
                            mirrorRadius,
                            mirrorRadius+mirrorThickness,
                            0.*deg, 360.*degree,
                            0.*deg, 60.*degree);
                            
-  // Now make the mirror from the union of the two.  Make the origine of the rays the 
-  // middle of the part of the radiator that makes it out
-   auto reflectorSolid = new G4IntersectionSolid(
-    "Mirror",
-    envelope,
-    sphere,
-    nullptr,      // <-- no rotation
-    G4ThreeVector(0.,yDetector/2.,zOrigin)     // <-- translation only
-);
+    // Now make the mirror from the union of the two.  Make the origine of the rays the 
+    // middle of the part of the radiator that makes it out
+    auto reflectorSolid = new G4IntersectionSolid(
+       "Mirror",
+       envelope,
+       sphere,
+       nullptr,      // <-- no rotation
+       G4ThreeVector(0.,yDetector/2.,zOrigin)     // <-- translation only
+    );
     
-  auto reflectorLV = new G4LogicalVolume (
-    reflectorSolid,
-    stainlessSteel,
-    "ReflectorLV");
+    auto reflectorLV = new G4LogicalVolume (
+      reflectorSolid,
+      mat.stainlessSteel,
+      "ReflectorLV");
     
     // Add the reflective surface
     
-   new G4LogicalSkinSurface(
+    new G4LogicalSkinSurface(
      "MirrorSkin",
      reflectorLV,
-     mirrorSurface
-   );    
-   // Place four of these, rotating by 90 degrees each time
-     // rotate
-    const G4int NREF=4;    
-    
-    G4double xoffs[NREF] = {0.,yDetector/2.,0.,-yDetector/2.};
-    G4double yoffs[NREF] = {yDetector/2.,0.,-yDetector/2.,0.};
+     mat.mirrorSurface
+    );    
+    // Place nMirror of these, rotating by 90 or 180 degrees each time
+    // Step through by 2 if there are only 2 mirrors
+    double dPhi = 180.*deg;
+    if(nMirrors==4) dPhi=90.*deg;
         
-    for(int i = 0; i<NREF; i+=2) {
-      auto refRot = new G4RotationMatrix();
+    for(int i = 0; i<nMirrors; i+=1) {
+       auto refRot = new G4RotationMatrix();
       
-      refRot->rotateZ(i*90.*degree);
+       refRot->rotateZ(i*dPhi);
 
 
-      new G4PVPlacement(
+       new G4PVPlacement(
         refRot,                 // rotate
         G4ThreeVector(0.,0.,0.),    // position
         reflectorLV,           // logical volume
@@ -396,52 +320,29 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         i,                       // copy number
         false                     // check overlaps
       );
-    }
- 
- // kill particles that get to a certain point
-  auto shieldTube = new G4Tubs(
-    "Shield",
-    yDetector-20.*cm,
-    yDetector+20.*cm,
-    1*mm,
-    0*degree,
-    360*degree
- );
-  auto shieldLV = new G4LogicalVolume(
-      shieldTube,
-      stainlessSteel,
-      "ShieldLV"
-    );
-  // Place it in the world (no rotation, centered at origin)
-  /*
-    new G4PVPlacement(
-      nullptr,                 // no rotation
-      G4ThreeVector(0,0,-10.*cm),    // position
-      shieldLV,           // logical volume
-      "Shield",          // name
-      logicWorld,              // mother volume
-      false,                   // no boolean operation
-      0,                       // copy number
-      true                     // check overlaps
-    );
-    */
-    // Now make some thin detectors
-     auto detectorLV = new G4LogicalVolume(
-      shieldTube,
-      air,
+     }
+    // Set up a bunch of virtual detectors near the focal plane
+    auto detectorTube = new G4Tubs(
+      "Detector",
+      yDetector-30.*cm,
+      yDetector+30.*cm,
+      1*mm,
+      0*degree,
+      360*degree);
+      
+    auto detectorLV = new G4LogicalVolume(
+      detectorTube,
+      mat.air,
       "DetectorLV"
     );
     
-  //Make it a sensitive detector
-  auto virtualSD = new VirtualSD("VirtualSD");
-  sdManager->AddNewDetector(virtualSD);
 
-  detectorLV->SetSensitiveDetector(virtualSD);
+    detectorLV->SetSensitiveDetector(surfaceSD);
 
-    
-    const G4int NDET=20;
-    
-    G4double z0=-5*cm,deltaZ=2.*cm;
+    // The values RMSStudy should match these (yeah, I know I should put it in
+    // a header file.)    
+    const G4int NDET=24;
+    G4double z0=-200*mm,deltaZ=20.*mm;
     
     for(int i=0;i<NDET;i++) {
           new G4PVPlacement(
@@ -457,14 +358,12 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     }
 
 
- // Set Shape2 as scoring volume
-  //
-  fScoringVolume = shieldLV;
-
-  //
-  // always return the physical World
-  //
-  return physWorld;
+    //
+    // always return the physical World
+    // This is a legacy from B1 that I haven't gotten rid of.
+    fScoringVolume = radiatorLV;
+    
+    return physWorld;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

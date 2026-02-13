@@ -35,23 +35,26 @@ void RMSStudy::Loop()
    // Create a TCanvas to draw the histogram in a window
    TCanvas *c1 = new TCanvas("c1", "Histogram Canvas", 800, 600);
 
-   // Get the Z slices
-   const int NSLICE=20;
-   double z0=-55.;
+   // Get the Z slices. These should match DetectorConstruction.cc
+   const int NDET=24;
+   double z0=-200.;
    double deltaZ=20.;
-   double z1=z0+(NSLICE)*deltaZ;
+
+   // Shift slightly to put it in the middle of the bin
+   z0 -= deltaZ/2.;
+   double z1=z0+(NDET)*deltaZ;
    
    TH2F *nphotons = new TH2F("nphotons","Number of Photons in Cuts vs. Z",
-     NSLICE,z0,z1,400,0.,4000.);
-   TH2F *xrms = new TH2F("xrms","X RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
-   TH2F *yrms = new TH2F("yrms","Y RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
-   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",NSLICE,z0,z1,100,0.,200.);
+     NDET,z0,z1,400,0.,4000.);
+   TH2F *xrms = new TH2F("xrms","X RMS vs. Z",NDET,z0,z1,100,0.,100.);   
+   TH2F *yrms = new TH2F("yrms","Y RMS vs. Z",NDET,z0,z1,100,0.,100.);   
+   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",NDET,z0,z1,100,0.,200.);
    
    
  
-   int nphot[NSLICE];
-   double xmean[NSLICE],x2mean[NSLICE],ymean[NSLICE],y2mean[NSLICE];
-   for(int i;i<NSLICE;i++) {
+   int nphot[NDET];
+   double xmean[NDET],x2mean[NDET],ymean[NDET],y2mean[NDET];
+   for(int i;i<NDET;i++) {
      nphot[i]=0;
      xmean[i]=0;
      x2mean[i]=0;
@@ -72,7 +75,7 @@ void RMSStudy::Loop()
       if(jentry==0) oldEventID=eventID;
       // Calculate the index
       int iz = int((z-z0)/deltaZ);
-      if((iz<0)||(iz>19)) {
+      if((iz<0)||(iz>(NDET-1))) {
         printf("iz = %d\n",iz);
       }
       // Count top and bottom
@@ -89,7 +92,7 @@ void RMSStudy::Loop()
       // Last event.
       // This actually puts the 
       if ((eventID!=oldEventID)||(jentry==(nentries-1))) {
-        for(int i=0;i<NSLICE;i++){
+        for(int i=0;i<NDET;i++){
              double zBin=z0+deltaZ*(i+.5);
              xmean[i] /=nphot[i];
              x2mean[i] /=nphot[i];

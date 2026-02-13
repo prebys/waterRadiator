@@ -40,8 +40,7 @@ void Analyze::Loop()
 
    // Book a 1D histogram (TH1F for float values)
    // Parameters: name, title, num_bins, x_low, x_high
-   TH1F *hist = new TH1F("nphotons", "Number of Photons Through Window;N Photons;Frequency", 100, 0.0, 2000.0);
-   TH1F *histSiPM = new TH1F("nphotonsSiPM", "Number of Photons Counted by SiPM;N Photons;Frequency", 100, 0.0, 2000.0);
+   TH1F *hist = new TH1F("nphotons", "Number of Photons Through Window;N Photons;Frequency", 100, 0.0, 5000.0);
 
 
 
@@ -67,9 +66,8 @@ void Analyze::Loop()
             nphotons -= 1;
             nphotonsSiPM -= 1;
          }
-         printf("Total of %lld photons found for event %lld\n",nphotons,oldEventID);
+         // printf("Total of %lld photons found for event %lld\n",nphotons,oldEventID);
          hist->Fill(nphotons);
-         histSiPM->Fill(nphotonsSiPM*.25);
          
          nphotons = 0;
       }
