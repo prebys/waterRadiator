@@ -175,9 +175,9 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
    // Make the shapes for the radiator and transport sections
    G4double beamRadius = 3.*cm;
-   G4double lenRadiator = 6.*cm;
-   G4double lenTransport = 6.*cm;
-   Radiator rad(beamRadius,lenRadiator,lenTransport);
+   G4double lenRadiator = 10.*cm;
+   G4double lenTransport = 10.*cm;
+   Radiator rad(beamRadius,lenRadiator);
    
    // Logical for radiator
    auto radiatorLV = new G4LogicalVolume(
@@ -185,13 +185,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       water,
       "RadiatorLV"
     );
-   // Logical volume for transport
-   auto transportLV = new G4LogicalVolume(
-      rad.transportSolid,
-      water,
-      "TransportLV"
-   );
-   
+    
 
   // Place them in the world (no rotation, centered at origin)
   new G4PVPlacement(
@@ -204,28 +198,19 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
      0,                       // copy number
      true                     // check overlaps
   );
-    new G4PVPlacement(
-     nullptr,                 // no rotation
-     G4ThreeVector(0,0,0),    // position
-     transportLV,           // logical volume
-     "Transport",          // name
-     logicWorld,              // mother volume
-     false,                   // no boolean operation
-     0,                       // copy number
-     true                     // check overlaps
-  );
-
   
-  //Make a detector to detect particle leaving the volume
-  // Create the solid
-
-  G4double zWindow[2] = {rad.z[3],rad.z[4]};
-  G4double rInnerWindow[2] = {rad.rOuter[3],rad.rOuter[4]};
-  G4double rOuterWindow[2] = {rad.rOuter[3]+1.*mm,rad.rOuter[4]+1.*mm};
-
-   // Full 360-degree polycone
+     // Full 360-degree polycone
    G4double startPhi = 0.0*deg;
    G4double deltaPhi = 360.0*deg;
+
+  //Make a detector to detect particle leaving the volume
+  //This isn't quite correct, but I'll fix it later.
+  
+
+  G4double zWindow[2] = {rad.z[1],rad.z[2]};
+  G4double rInnerWindow[2] = {rad.rOuter[1],rad.rOuter[2]};
+  G4double rOuterWindow[2] = {rad.rOuter[1]+1*mm,rad.rOuter[2]+1*mm};
+
 
   auto windowSolid = new G4Polycone(
     "Window",     // name
@@ -243,15 +228,14 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
       quartz,
       "WindowLV"
     );
-  
 
    //Make it a sensitive detector
   auto sdManager = G4SDManager::GetSDMpointer();
-  auto surfaceSD = new SurfaceSD("SurfaceSD");
+  auto surfaceSD = new SurfaceSD("Window");
   sdManager->AddNewDetector(surfaceSD);
 
   windowLV->SetSensitiveDetector(surfaceSD);
- 
+
   // Place it in the world (no rotation, centered at origin)
   
   new G4PVPlacement(
@@ -265,6 +249,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     true                     // check overlaps
   );
   
+  
  // Add a beryllium window at the end to block photons from getting back into 
  // transport
  
@@ -272,7 +257,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // Use a polycone because I'm lazy
   G4double zBeamWindow[2]={rad.z[2],rad.z[2]+.1*mm};
   G4double rInnerBeamWindow[2]={0.,0.};
-  G4double rOuterBeamWindow[2]={rad.rInner[2],rad.rInner[2]};
+  G4double rOuterBeamWindow[2]={beamRadius,beamRadius};
 
   auto beamWindowSolid = new G4Polycone(
     "BeamWindow",     // name
@@ -337,9 +322,10 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   
   // Construct a polycone that will be the envelope for  the mirror
   G4double ang=0.713532378;   
-  G4double zEnv[2] = {lenRadiator,lenRadiator/2.+50*cm};
+  G4double zEnv[2] = {lenRadiator,50*cm};
   G4double rEnvInner[2] = {beamRadius-1*cm,beamRadius-1.*cm+(zEnv[1]-zEnv[0])*tan(ang)};
-  G4double rEnvOuter[2] = {rEnvInner[0]+beamRadius+2.*cm,rEnvInner[1]+beamRadius+2.*cm};
+  G4double rEnvOuter[2] = {beamRadius+1*cm+lenRadiator*tan(ang),beamRadius+1.*cm+
+         zEnv[1]*tan(ang)};
   
   auto envelope = new G4Polycone("Envelope",1.*deg,
          178.*deg,
@@ -358,13 +344,15 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                            0.*deg, 360.*deg,
                            0.*deg, 60.*deg);
                            
-  // Now make the mirror from the union of the two
+  // Now make the mirror from the union of the two.  Make the origine of the rays the 
+  // middle of the part of the radiator that makes it out
+   G4double zOrigin = (lenRadiator-beamRadius/tan(ang))/2.;
    auto reflectorSolid = new G4IntersectionSolid(
     "Mirror",
     envelope,
     sphere,
     nullptr,      // <-- no rotation
-    G4ThreeVector(0.,yDetector/2.,0.)     // <-- translation only
+    G4ThreeVector(0.,yDetector/2.,zOrigin)     // <-- translation only
 );
     
   auto reflectorLV = new G4LogicalVolume (
@@ -422,7 +410,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   
     new G4PVPlacement(
       nullptr,                 // no rotation
-      G4ThreeVector(0,0,-5.*mm),    // position
+      G4ThreeVector(0,0,-10.*cm),    // position
       shieldLV,           // logical volume
       "Shield",          // name
       logicWorld,              // mother volume
@@ -445,9 +433,9 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   detectorLV->SetSensitiveDetector(virtualSD);
 
     
-    const G4int NDET=12;
+    const G4int NDET=20;
     
-    G4double z0=0,deltaZ=.5*cm;
+    G4double z0=-5*cm,deltaZ=1.*cm;
     
     for(int i=0;i<NDET;i++) {
           new G4PVPlacement(
@@ -465,7 +453,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
  // Set Shape2 as scoring volume
   //
-  fScoringVolume = windowLV;
+  fScoringVolume = shieldLV;
 
   //
   // always return the physical World

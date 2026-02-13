@@ -11,12 +11,11 @@
 
 class Radiator  {
 public:
-  static const G4int NSEG=5;
+  static const G4int NSEG=3;
   G4double z[NSEG];
   G4double rInner[NSEG];
   G4double rOuter[NSEG];
   G4Polycone *radiatorSolid;  // Solid corresponding to radiator
-  G4Polycone *transportSolid; // Solid corresponding to transport
-  Radiator(G4double beamRadius, G4double lenRadiator, G4double lenTransport);
+  Radiator(G4double beamRadius, G4double lenRadiator);
 
 };

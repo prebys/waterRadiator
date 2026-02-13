@@ -35,17 +35,20 @@ void RMSStudy::Loop()
    // Create a TCanvas to draw the histogram in a window
    TCanvas *c1 = new TCanvas("c1", "Histogram Canvas", 800, 600);
 
-
-   TH2F *nphotons = new TH2F("nphotons","Number of Photons in Cuts vs. Z",12,0.,60.,300,0.,1500.);
-   TH2F *xrms = new TH2F("xrms","X RMS vs. Z",12,0.,60.,100,0.,50.);   
-   TH2F *yrms = new TH2F("yrms","Y RMS vs. Z",12,0.,60.,100,0.,50.);   
-   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",12,0.,60.,100,0.,50.);
+   // Get the Z slices
+   const int NSLICE=20;
+   double z0=-55.;
+   double deltaZ=10.;
+   double z1=z0+(NSLICE)*deltaZ;
    
-   double yLo=-90.,yHi=90.;
-   double xLo=280.,xHi=420.;
+   TH2F *nphotons = new TH2F("nphotons","Number of Photons in Cuts vs. Z",
+     NSLICE,z0,z1,400,0.,4000.);
+   TH2F *xrms = new TH2F("xrms","X RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
+   TH2F *yrms = new TH2F("yrms","Y RMS vs. Z",NSLICE,z0,z1,100,0.,100.);   
+   TH2F *rrms = new TH2F("rrms","R RMS vs. Z",NSLICE,z0,z1,100,0.,100.);
    
-   const int NSLICE=12;
-
+   
+ 
    int nphot[NSLICE];
    double xmean[NSLICE],x2mean[NSLICE],ymean[NSLICE],y2mean[NSLICE];
    for(int i;i<NSLICE;i++) {
@@ -67,28 +70,27 @@ void RMSStudy::Loop()
 
       // Get the total any time the event number changes or on the last entry.
       if(jentry==0) oldEventID=eventID;
-      
-      int iz = int(z/5);
+      // Calculate the index
+      int iz = int((z-z0)/deltaZ);
+      if((iz<0)||(iz>19)) {
+        printf("iz = %d",iz);
+      }
       // Count both sides
       double absx = abs(x);
-      if((absx>xLo)&&
-         (absx<xHi)&&
-         (y>yLo)&&
-         (y<yHi)) {
-         
-         nphot[iz]+=1;
-         xmean[iz]+=absx;
-         x2mean[iz]+=absx*absx;
-         ymean[iz]+=y;
-         y2mean[iz]+=y*y;
-         incEvent = eventID;   // Last event to increment counts
-         }
-         // Add everything up whenever the event changes or on the 
-         // Last event.
-         // This actually puts the 
-         if ((eventID!=oldEventID)||(jentry==(nentries-1))) {
-           for(int i=0;i<NSLICE;i++){
-             double zBin=0.+5.*i;
+       
+      nphot[iz]+=1;
+      xmean[iz]+=absx;
+      x2mean[iz]+=absx*absx;
+      ymean[iz]+=y;
+      y2mean[iz]+=y*y;
+      incEvent = eventID;   // Last event to increment counts
+
+      // Add everything up whenever the event changes or on the 
+      // Last event.
+      // This actually puts the 
+      if ((eventID!=oldEventID)||(jentry==(nentries-1))) {
+        for(int i=0;i<NSLICE;i++){
+             double zBin=z0+deltaZ*(i+.5);
              xmean[i] /=nphot[i];
              x2mean[i] /=nphot[i];
              ymean[i]  /=nphot[i];
@@ -108,7 +110,7 @@ void RMSStudy::Loop()
            }       
          
        
-        }
+       }
       oldEventID=eventID;
       
       
