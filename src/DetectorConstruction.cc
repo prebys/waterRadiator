@@ -77,13 +77,16 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
    G4double beamRadius = 3.*cm;
    G4double lenRadiator = 10.*cm;
    G4double beamWindowThickness = .1*mm;
+   G4double windowThickness = 1*mm;   // quartz window
    G4int  nMirrors = 2;   // Number of mirrors (can only be 2 or 4)
    G4double mirrorRadius = 50.*cm;
    G4double mirrorThickness = 2.*mm;
    G4double yDetector = 50*cm; // Offset to detector.  It will rotate for each mirror
+   // Build the materials 
    // This builds the radiator Solid
-   Radiator rad(beamRadius,lenRadiator);
    static MyMaterials mat;
+
+   static Radiator rad(&mat,beamRadius,lenRadiator,windowThickness);
 
 
    G4cout << "About to create materials" << G4endl;
@@ -115,67 +118,37 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                                      checkOverlaps);  // overlaps checking
 
     
-   // Logical for radiator
-   auto radiatorLV = new G4LogicalVolume(
-      rad.radiatorSolid,
-      mat.water,
-      "RadiatorLV"
-    );
-    
+   // Full 360-degree polycone
+   G4double startPhi = 0.0*deg;
+   G4double deltaPhi = 360.0*deg;
+      
 
-   // Place them in the world (no rotation, centered at origin)
+   // Place the radiator
    new G4PVPlacement(
      nullptr,                 // no rotation
      G4ThreeVector(0,0,0),    // position
-     radiatorLV,           // logical volume
+     rad.radiatorLV,           // logical volume
      "Radiator",          // name
      logicWorld,              // mother volume
      false,                   // no boolean operation
      0,                       // copy number
      true                     // check overlaps
    );
-   // Full 360-degree polycone
-   G4double startPhi = 0.0*deg;
-   G4double deltaPhi = 360.0*deg;
-
-   //Make a quartz window, which will also detect particles leaving the radiator,
-   //based on the dimensions of the radiator
-   //This isn't quite correct, but I'll fix it later.
-   G4double zWindow[2] = {rad.z[1],rad.z[2]};
-   G4double rInnerWindow[2] = {rad.rOuter[1],rad.rOuter[2]};
-   G4double rOuterWindow[2] = {rad.rOuter[1]+1*mm,rad.rOuter[2]+1*mm};
 
 
-   auto windowSolid = new G4Polycone(
-     "Window",     // name
-     startPhi,         // start angle
-     deltaPhi,         // opening angle
-     2,       // number of z planes
-     zWindow,          // z coordinates
-     rInnerWindow,           // inner radii
-     rOuterWindow            // outer radii
-   );
-
-   // Logical volume, made of quartz
-   auto windowLV = new G4LogicalVolume(
-      windowSolid,
-      mat.quartz,
-      "WindowLV"
-    );
-
-   //Make it a sensitive detector
+   //Make the window a sensitive detector
    auto sdManager = G4SDManager::GetSDMpointer();
    auto surfaceSD = new SurfaceSD("Window");
    sdManager->AddNewDetector(surfaceSD);
 
-   windowLV->SetSensitiveDetector(surfaceSD);
+   rad.windowLV->SetSensitiveDetector(surfaceSD);
 
    // Place it in the world (no rotation, centered at origin)
   
    new G4PVPlacement(
      nullptr,                 // no rotation
      G4ThreeVector(0,0,0),    // position
-     windowLV,           // logical volume
+     rad.windowLV,           // logical volume
      "Window",          // name
      logicWorld,              // mother volume
      false,                   // no boolean operation
@@ -361,7 +334,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     //
     // always return the physical World
     // This is a legacy from B1 that I haven't gotten rid of.
-    fScoringVolume = radiatorLV;
+    fScoringVolume = rad.radiatorLV;
     
     return physWorld;
 }
