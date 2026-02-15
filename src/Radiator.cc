@@ -1,11 +1,11 @@
 //  Radiator.cc
-// This is a static class that will create the dimensions needed to construct
-// the water radiator for the Mu2e extinction radiator.
-// It's in two section:
-//   - The first is the radiator section, which is solid. The sides are angled
-//     at the Cerenkov angle for water.
-//   - The second is the transport section, which is is a hollow cone statarting
-//     at the end of the first section.
+// This is the class that creates the radiator assembly for the Mu2e extinction
+// water-based Cerenkov detector.  It currently creates logical volumes for the water 
+// radiator and the quartz window, called:
+//   - radiatorLV 
+//   - windowLV
+//  It also creates a logical assembly of the two
+//   - radiatorAV
 //
 
 #include "Radiator.hh" 
@@ -112,6 +112,14 @@ Radiator::Radiator(MyMaterials *mat,G4double beamRadius, G4double lenRadiator,
    
    
    G4cout << "Created Window Logical Volume."<<G4endl;
+   // Now add the two together
+    G4ThreeVector pos(0, 0, 0);
+    G4RotationMatrix* rot = new G4RotationMatrix();
+
+   radiatorAV = new G4AssemblyVolume();
+   radiatorAV->AddPlacedVolume(radiatorLV,pos,rot);
+   radiatorAV->AddPlacedVolume(windowLV,pos,rot);
+    
 
 
 }

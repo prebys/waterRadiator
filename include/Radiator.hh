@@ -8,6 +8,7 @@
 #include "G4Polycone.hh"
 #include "G4SubtractionSolid.hh"
 #include "G4LogicalVolume.hh"
+#include "G4AssemblyVolume.hh"
 #include "MyMaterials.hh"
 
 
@@ -17,8 +18,10 @@ public:
   G4double z[NSEG];
   G4double rInner[NSEG];
   G4double rOuter[NSEG];
-  G4LogicalVolume *radiatorLV;
-  G4LogicalVolume *windowLV;
+  G4LogicalVolume *radiatorLV;   // Logical volume for the radiator
+  G4LogicalVolume *windowLV;     // Logical volume for window
+  G4AssemblyVolume *radiatorAV;  // Assembly volume for the two together
+  
   Radiator(MyMaterials *mat,G4double beamRadius, G4double lenRadiator,G4double windowThickness);
 
 };

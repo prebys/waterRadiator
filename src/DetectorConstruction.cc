@@ -123,17 +123,6 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
    G4double deltaPhi = 360.0*deg;
       
 
-   // Place the radiator
-   new G4PVPlacement(
-     nullptr,                 // no rotation
-     G4ThreeVector(0,0,0),    // position
-     rad.radiatorLV,           // logical volume
-     "Radiator",          // name
-     logicWorld,              // mother volume
-     false,                   // no boolean operation
-     0,                       // copy number
-     true                     // check overlaps
-   );
 
 
    //Make the window a sensitive detector
@@ -143,21 +132,15 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
    rad.windowLV->SetSensitiveDetector(surfaceSD);
 
-   // Place it in the world (no rotation, centered at origin)
-  
-   new G4PVPlacement(
-     nullptr,                 // no rotation
-     G4ThreeVector(0,0,0),    // position
-     rad.windowLV,           // logical volume
-     "Window",          // name
-     logicWorld,              // mother volume
-     false,                   // no boolean operation
-     0,                       // copy number
-     true                     // check overlaps
-   );
-   
+   // Plase the combined radiator/window into the world.
+   G4ThreeVector pos(0.,0.,0);
+   auto rot = new G4RotationMatrix();
+   rad.radiatorAV->MakeImprint(logicWorld, 
+       pos, 
+       rot);
 
-  
+
+
   
    // Add a titanium window at the end to block photons from getting back into 
    // transport
