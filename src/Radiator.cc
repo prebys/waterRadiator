@@ -48,7 +48,7 @@ Radiator::Radiator(MyMaterials *mat,G4double beamRadius, G4double lenRadiator,
    // Now project the outside
    rOuter[3] = rOuter[1];
    rOuter[4] = rOuter[3]+(z[4]-z[3])*tan(lightAngle);
-   rOuter[5] = rOuter[3]-(z[5]-z[3])/tan(lightAngle);
+   rOuter[5] = rOuter[4]-(z[5]-z[4])/tan(lightAngle);
    rOuter[6] = rInner[6];
 
    
